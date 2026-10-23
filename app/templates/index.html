@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f2">
+  <link rel="icon" href="data:,">
+  <title>Check-in Buddy</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">YOUR DAILY COMPANION</p>
+        <h1 id="greeting">Good morning!</h1>
+        <p id="today-label" class="muted">A little check-in, at your pace.</p>
+      </div>
+      <a class="text-link" href="/family">Family view <span aria-hidden="true">→</span></a>
+    </header>
+
+    <div class="disclaimer" role="note">
+      Check-in Buddy is a wellness companion, not a medical service. For urgent help, contact local emergency services.
+    </div>
+    <div id="fallback-banner" class="fallback-banner" role="status" hidden></div>
+    <div id="app-error" class="error-banner" role="alert" hidden></div>
+
+    <section class="layout">
+      <div class="primary-column">
+        <section class="panel chat-panel" aria-labelledby="chat-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">A MOMENT FOR YOU</p>
+              <h2 id="chat-heading">How are you feeling?</h2>
+            </div>
+            <button id="voice-button" class="icon-button" type="button" aria-label="Speak your message" title="Speak your message">🎙</button>
+          </div>
+          <div id="conversation" class="conversation" role="log" aria-live="polite" aria-relevant="additions">
+            <p class="chat-message assistant-message">I'm here with you. Tell me how your day is going, or ask me to log a meal or medication.</p>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <label class="visually-hidden" for="message-input">Your message</label>
+            <input id="message-input" name="message" maxlength="2000" autocomplete="off" placeholder="Type a message…" required>
+            <button id="send-button" class="button button-primary" type="submit">Send</button>
+          </form>
+          <div class="chat-options">
+            <label><input id="mute-toggle" type="checkbox"> Mute spoken replies</label>
+            <label><input id="large-text-toggle" type="checkbox"> Larger text</label>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="daily-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">YOUR ROUTINE</p>
+              <h2 id="daily-heading">Today’s check-in</h2>
+            </div>
+            <button id="checkin-button" class="button button-secondary" type="button">Mark check-in complete</button>
+          </div>
+          <h3 class="subheading">Medication</h3>
+          <div id="medication-list" class="activity-list"></div>
+          <h3 class="subheading">Meals</h3>
+          <div id="meal-list" class="meal-grid"></div>
+          <form id="mood-form" class="inline-form">
+            <label for="mood-select">How is your mood?</label>
+            <select id="mood-select" name="mood">
+              <option value="5">Very good</option>
+              <option value="4">Good</option>
+              <option value="3" selected>Okay</option>
+              <option value="2">Low</option>
+              <option value="1">Very low</option>
+            </select>
+            <button class="button button-secondary" type="submit">Save mood</button>
+          </form>
+        </section>
+      </div>
+
+      <aside class="side-column">
+        <section class="panel" aria-labelledby="reminder-heading">
+          <p class="eyebrow">DON’T FORGET</p>
+          <h2 id="reminder-heading">Reminders</h2>
+          <ul id="reminder-list" class="simple-list"><li class="muted">Loading reminders…</li></ul>
+          <form id="reminder-form" class="stacked-form">
+            <label for="reminder-text">Add a reminder</label>
+            <input id="reminder-text" name="text" maxlength="250" placeholder="What would you like to remember?" required>
+            <label for="reminder-time">When? (today)</label>
+            <input id="reminder-time" name="remind_at" type="time" required>
+            <button class="button button-secondary" type="submit">Add reminder</button>
+          </form>
+        </section>
+        <section class="panel">
+          <p class="eyebrow">YOUR SUPPORT CIRCLE</p>
+          <h2>Family contact</h2>
+          <p id="family-contact" class="muted">Loading…</p>
+          <p class="small-note">Your family view shows routine check-ins and alerts.</p>
+        </section>
+        <p id="provider-status" class="provider-status" aria-live="polite">Connecting…</p>
+      </aside>
+    </section>
+    <footer>Take things one step at a time. Your daily log is not a substitute for professional care.</footer>
+  </main>
+
+  <script>
+    const USER_ID = 1;
+    const conversation = document.getElementById('conversation');
+    const appError = document.getElementById('app-error');
+    const fallbackBanner = document.getElementById('fallback-banner');
+
+    function showError(message) {
+      appError.textContent = message;
+      appError.hidden = false;
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const detail = typeof payload.detail === 'string' ? payload.detail : 'Please try again.';
+        throw new Error(detail);
+      }
+      appError.hidden = true;
+      return payload;
+    }
+
+    function addMessage(text, role) {
+      const message = document.createElement('p');
+      message.className = `chat-message ${role}-message`;
+      message.textContent = text;
+      conversation.append(message);
+      conversation.scrollTop = conversation.scrollHeight;
+    }
+
+    async function loadChatHistory() {
+      const result = await api(`/api/chat/history/${USER_ID}?limit=30`);
+      if (!result.messages.length) return;
+      conversation.replaceChildren();
+      result.messages.forEach((message) => addMessage(message.content, message.role));
+    }
+
+    function renderDashboard(data) {
+      document.getElementById('greeting').textContent = `Good day, ${data.user.name.split(' ')[0]}.`;
+      document.getElementById('today-label').textContent = new Date(`${data.date}T12:00:00`).toLocaleDateString(undefined, {
+        weekday: 'long', month: 'long', day: 'numeric'
+      });
+      document.getElementById('family-contact').textContent = `${data.user.family_contact_name} is your family contact.`;
+
+      const medicationList = document.getElementById('medication-list');
+      medicationList.replaceChildren();
+      data.medications.forEach((medication) => {
+        const row = document.createElement('div');
+        row.className = 'activity-row';
+        const detail = document.createElement('span');
+        detail.textContent = `${medication.name} · ${medication.scheduled_time}`;
+        const button = document.createElement('button');
+        button.className = medication.taken ? 'button button-done' : 'button button-secondary';
+        button.type = 'button';
+        button.textContent = medication.taken ? 'Logged' : 'Log taken';
+        button.disabled = medication.taken;
+        button.addEventListener('click', async () => {
+          try {
+            await api('/api/logs/medication', {
+              method: 'POST',
+              body: JSON.stringify({ user_id: USER_ID, medication_name: medication.name })
+            });
+            await loadDashboard();
+          } catch (error) { showError(error.message); }
+        });
+        row.append(detail, button);
+        medicationList.append(row);
+      });
+
+      const mealList = document.getElementById('meal-list');
+      mealList.replaceChildren();
+      data.meals.forEach((meal) => {
+        const button = document.createElement('button');
+        button.className = meal.eaten ? 'meal-button meal-done' : 'meal-button';
+        button.type = 'button';
+        button.textContent = `${meal.eaten ? '✓ ' : '+ '}${meal.meal_type[0].toUpperCase()}${meal.meal_type.slice(1)}`;
+        button.disabled = meal.eaten;
+        button.addEventListener('click', async () => {
+          try {
+            await api('/api/logs/meal', {
+              method: 'POST',
+              body: JSON.stringify({ user_id: USER_ID, meal_type: meal.meal_type })
+            });
+            await loadDashboard();
+          } catch (error) { showError(error.message); }
+        });
+        mealList.append(button);
+      });
+
+      const reminders = document.getElementById('reminder-list');
+      reminders.replaceChildren();
+      if (!data.reminders.length) {
+        const empty = document.createElement('li');
+        empty.className = 'muted';
+        empty.textContent = 'No reminders yet.';
+        reminders.append(empty);
+      }
+      data.reminders.forEach((reminder) => {
+        const item = document.createElement('li');
+        const time = new Date(reminder.remind_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        item.textContent = `${time} · ${reminder.text}`;
+        reminders.append(item);
+      });
+
+      document.getElementById('checkin-button').textContent = data.check_in_completed
+        ? 'Check-in complete ✓'
+        : 'Mark check-in complete';
+      document.getElementById('checkin-button').disabled = data.check_in_completed;
+      if (data.mood !== null) document.getElementById('mood-select').value = String(data.mood);
+    }
+
+    async function loadDashboard() {
+      const dashboard = await api(`/api/dashboard/${USER_ID}`);
+      renderDashboard(dashboard);
+    }
+
+    document.getElementById('chat-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const input = document.getElementById('message-input');
+      const sendButton = document.getElementById('send-button');
+      const message = input.value.trim();
+      if (!message) return;
+      sendButton.disabled = true;
+      sendButton.textContent = 'Sending…';
+      addMessage(message, 'user');
+      try {
+        const result = await api('/api/chat', {
+          method: 'POST',
+          body: JSON.stringify({ user_id: USER_ID, message })
+        });
+        input.value = '';
+        addMessage(result.reply, 'assistant');
+        if (result.fallback) {
+          fallbackBanner.hidden = false;
+          fallbackBanner.textContent = `NVIDIA NIM Fallback: Timeout on ${result.fallback.primary_model_name}. Response generated by ${result.fallback.model_name}.`;
+        } else {
+          fallbackBanner.hidden = true;
+        }
+        if (!document.getElementById('mute-toggle').checked && 'speechSynthesis' in window) {
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance(result.reply));
+        }
+        await loadDashboard();
+      } catch (error) {
+        let explanation = error.message;
+        if (explanation.includes('NVIDIA_API_KEY is not configured')) {
+          explanation = 'To enable chat, get a free NVIDIA NIM API key, add it as NVIDIA_API_KEY in a project .env file, and restart the app. See the setup steps in README.md.';
+        }
+        addMessage(`I couldn’t send that just now. ${explanation}`, 'assistant');
+        showError(explanation);
+      } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = 'Send';
+      }
+    });
+
+    document.getElementById('voice-button').addEventListener('click', () => {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        document.getElementById('message-input').focus();
+        showError('Voice input is not available in this browser. You can type your message instead.');
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = navigator.language || 'en-US';
+      recognition.onresult = (event) => {
+        document.getElementById('message-input').value = event.results[0][0].transcript;
+        document.getElementById('message-input').focus();
+      };
+      recognition.onerror = () => showError('I couldn’t hear that. Please try again or type your message.');
+      recognition.start();
+    });
+
+    document.getElementById('checkin-button').addEventListener('click', async () => {
+      try {
+        await api('/api/check-ins', { method: 'POST', body: JSON.stringify({ user_id: USER_ID }) });
+        await loadDashboard();
+      } catch (error) { showError(error.message); }
+    });
+
+    document.getElementById('mood-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await api('/api/logs/mood', {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: USER_ID,
+            mood: Number(document.getElementById('mood-select').value)
+          })
+        });
+        await loadDashboard();
+      } catch (error) { showError(error.message); }
+    });
+
+    document.getElementById('reminder-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      try {
+        await api('/api/reminders', {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: USER_ID,
+            text: form.get('text'),
+            remind_at: form.get('remind_at')
+          })
+        });
+        event.currentTarget.reset();
+        await loadDashboard();
+      } catch (error) { showError(error.message); }
+    });
+
+    document.getElementById('large-text-toggle').addEventListener('change', (event) => {
+      document.body.classList.toggle('large-text', event.target.checked);
+    });
+
+    async function initialize() {
+      try {
+        const status = await api('/api/status');
+        document.getElementById('provider-status').textContent =
+          `Assistant: ${status.provider} · ${status.model_name || status.model} · emotion model ${status.emotion_model.trained ? 'ready' : 'not trained'}`;
+        if (status.provider === 'nvidia_nim' && !status.api_key_configured) {
+          showError('NVIDIA NIM is selected, but no API key is configured. Get a free NIM API key and set NVIDIA_API_KEY in your project .env file to enable generative chat.');
+        }
+        if (!status.emotion_model.trained) {
+          fallbackBanner.hidden = false;
+          fallbackBanner.textContent = 'The chat tone model is not trained yet. Run python -m app.train_emotion_model to train from the two project datasets.';
+        }
+        try {
+          await loadDashboard();
+        } catch (error) {
+          if (!error.message.includes('Seed the demo data')) throw error;
+          await api('/seed', { method: 'POST' });
+          await loadDashboard();
+        }
+        await loadChatHistory();
+      } catch (error) { showError(error.message); }
+    }
+
+    initialize();
+  </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+/* Check-in Buddy - Senior View Styles */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #2ecc71;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --bg-color: #f8f9fa;
+    --text-color: #2c3e50;
+    --light-bg: #ffffff;
+}
+
+/* Container */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+/* Header */
+header {
+    text-align: center;
+    padding: 20px 0;
+    border-bottom: 2px solid #e0e0e0;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    color: var(--primary-color);
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+header p {
+    color: #666;
+    margin: 5px 0 0 0;
+    font-size: 1rem;
+}
+
+/* Disclaimer */
+.disclaimer {
+    background: #fff8e1;
+    border-left: 4px solid var(--warning-color);
+    padding: 10px 15px;
+    margin: 15px 0;
+    font-size: 0.9rem;
+    color: #717171;
+    border-radius: 4px;
+}
+
+/* Main content */
+.main-content {
+    background: var(--light-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Voice ring */
+.voice-ring {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.voice-ring button {
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    border-radius: 25px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+    transition: background 0.3s;
+}
+
+.voice-ring button:hover {
+    background: #2980b9;
+}
+
+/* Actions */
+.actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.chip {
+    background: var(--light-bg);
+    border: 2px solid #e0e0e0;
+    padding: 12px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.chip:hover {
+    border-color: var(--secondary-color);
+    background: #f0f7ff;
+}
+
+/* Reminders */
+.reminders {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.reminders h3 {
+    margin: 0 0 10px 0;
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+.reminders ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reminders li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+/* Toggle sections */
+.mute-toggle, .larger-text {
+    margin: 15px 0;
+}
+
+.mute-toggle label, .larger-text label {
+    display: block;
+    margin: 5px 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Footer */
+footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #777;
+}
+
+/* Accessibility */
+@media (prefers-contrast: more) {
+    .container { border: 2px solid currentColor; }
+}

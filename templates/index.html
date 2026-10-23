@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in Buddy - Senior View</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>?? Good morning, Asha!</h1>
+            <p>Your daily wellness check-in</p>
+        </header>
+        
+        <div class="disclaimer">
+            <small>This is a wellness companion, not a medical service.</small>
+        </div>
+        
+        <div class="main-content">
+            <section class="voice-ring">
+                <button id="voice-btn">??? Start Check-in</button>
+            </section>
+            
+            <section class="actions">
+                <div class="chip">?? Log medication</div>
+                <div class="chip">??? Log meal</div>
+                <div class="chip">?? Log mood</div>
+            </section>
+            
+            <section class="reminders">
+                <h3>Due reminders</h3>
+                <ul id="reminders-list">
+                    <li>Metformin at 08:00</li>
+                    <li>Amlodipine at 20:00</li>
+                </ul>
+            </section>
+            
+            <section class="mute-toggle">
+                <label>
+                    <input type="checkbox" id="mute"> Mute TTS
+                </label>
+            </section>
+            
+            <section class="larger-text">
+                <label>
+                    <input type="checkbox" id="larger"> Larger text
+                </label>
+            </section>
+        </div>
+        
+        <footer>
+            <p id="disclaimer-footer">Wellness companion, not a medical service.</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Text fallback for check-in
+        const startCheckIn = () => {
+            const message = prompt('How are you feeling today?\n\nYou can say things like:\n- "I took my medication"\n- "I had breakfast"\n- "I feel mood 3"\n- "I skipped lunch"');
+            if (message) {
+                alert(You said: ""\n(Note: In a full app, this would be sent to the backend));
+            }
+        };
+        
+        // TTS with text fallback
+        const speak = (text) => {
+            if (document.getElementById('mute').checked) return;
+            const synth = window.speechSynthesis;
+            if (synth) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.onend = () => {};
+                synth.speak(utterance);
+            } else {
+                console.log('TTS:', text);
+            }
+        };
+        
+        document.getElementById('voice-btn').addEventListener('click', startCheckIn);
+        
+        // Initial speak
+        speak('Good morning! Ready for your daily check-in.');
+    </script>
+</body>
+</html>

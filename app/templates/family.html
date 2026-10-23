@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Family view · Check-in Buddy</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">CHECK-IN BUDDY</p>
+        <h1>Family view</h1>
+        <p id="family-subtitle" class="muted">A simple overview of recent activity.</p>
+      </div>
+      <a class="text-link" href="/">← Senior view</a>
+    </header>
+    <div class="disclaimer" role="note">This overview reflects what was logged and is not a medical assessment or emergency monitoring service.</div>
+    <div id="family-error" class="error-banner" role="alert" hidden></div>
+    <div class="family-grid">
+      <section class="panel">
+        <p class="eyebrow">TODAY</p>
+        <h2>Routine overview</h2>
+        <ul id="routine-list" class="status-list"></ul>
+      </section>
+      <section class="panel">
+        <p class="eyebrow">FOLLOW-UP</p>
+        <h2>Alerts</h2>
+        <ul id="alert-list" class="status-list"></ul>
+      </section>
+    </div>
+  </main>
+  <script>
+    const USER_ID = 1;
+    const errorBanner = document.getElementById('family-error');
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.detail || 'Could not load the family view.');
+      return body;
+    }
+
+    function addLine(list, text) {
+      const item = document.createElement('li');
+      item.textContent = text;
+      list.append(item);
+    }
+
+    async function load() {
+      try {
+        const data = await request(`/api/family/${USER_ID}`);
+        document.getElementById('family-subtitle').textContent =
+          `${data.user.name} · activity for ${new Date(`${data.date}T12:00:00`).toLocaleDateString()}`;
+        const routine = document.getElementById('routine-list');
+        routine.replaceChildren();
+        data.medications.forEach((med) => addLine(
+          routine, `${med.name}: ${med.taken ? `logged at ${med.time_taken || 'today'}` : 'not logged today'}`
+        ));
+        data.meals.forEach((meal) => addLine(
+          routine, `${meal.meal_type[0].toUpperCase()}${meal.meal_type.slice(1)}: ${meal.eaten ? 'logged' : 'not logged'}`
+        ));
+        addLine(routine, `Check-in: ${data.check_in_completed ? 'complete' : 'not complete'}`);
+        addLine(routine, `Mood: ${data.mood === null ? 'not logged' : `${data.mood} out of 5`}`);
+
+        const alertList = document.getElementById('alert-list');
+        alertList.replaceChildren();
+        if (!data.alerts.length) addLine(alertList, 'No alerts have been raised.');
+        data.alerts.forEach((alert) => {
+          const item = document.createElement('li');
+          const row = document.createElement('div');
+          row.className = 'alert-card';
+          const text = document.createElement('div');
+          const severity = document.createElement('span');
+          severity.className = 'alert-severity';
+          severity.textContent = alert.severity;
+          const message = document.createElement('span');
+          message.textContent = alert.message;
+          text.append(severity, message);
+          row.append(text);
+          if (alert.status !== 'acknowledged') {
+            const button = document.createElement('button');
+            button.className = 'button button-secondary';
+            button.type = 'button';
+            button.textContent = 'Acknowledge';
+            button.addEventListener('click', async () => {
+              try {
+                await request(`/api/alerts/${alert.id}/acknowledge?user_id=${USER_ID}`, { method: 'POST' });
+                await load();
+              } catch (error) {
+                errorBanner.textContent = error.message;
+                errorBanner.hidden = false;
+              }
+            });
+            row.append(button);
+          }
+          item.append(row);
+          alertList.append(item);
+        });
+      } catch (error) {
+        errorBanner.textContent = error.message;
+        errorBanner.hidden = false;
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+# Check-in Buddy - Wellness Companion App
