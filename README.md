@@ -28,7 +28,7 @@ Check-in Buddy is a local FastAPI wellness companion with a senior check-in page
    python -m uvicorn app.main:app --reload
    ```
 
-5. Open <http://127.0.0.1:8000>. The first visit creates the demo persona if the database is empty. The family dashboard is at <http://127.0.0.1:8000/family>.
+5. Open <http://127.0.0.1:8000>. The first visit creates the demo persona if the database is empty. The family dashboard is at <http://127.0.0.1:8000/family> and mcp http://127.0.0.1:8765/mcp .
 
 For local UI/API work without an NIM key, set `LLM_PROVIDER=deterministic` in `.env`. This test provider is not a generative assistant. Direct routine logging and the family dashboard work independently of the LLM provider.
 
